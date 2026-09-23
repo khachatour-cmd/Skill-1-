@@ -5,7 +5,7 @@ license: LicenseRef-Extendly-Partner
 compatibility: Runs unchanged in Claude Code (terminal, IDE, desktop), Claude Code cloud sessions, and claude.ai chat or Cowork. Needs no MCP server and no token; network access is optional. Without Artifact it writes a self-contained .html file instead, and if the live offer menu is unreachable it falls back to its bundled snapshot. On claude.ai the /fitd-builder slash commands do not exist, so ask in plain language instead.
 allowed-tools: [Read, Write, Glob, Grep, Edit, AskUserQuestion, WebSearch, WebFetch, Artifact]
 metadata:
-  version: 0.5.0
+  version: 0.4.9
   category: content
   platforms: [cli, cloud, claude-ai]
   marketplace: extendly-partner-resources
