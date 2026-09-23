@@ -1,0 +1,52 @@
+# Keeps the fitd-builder skill current with Extendly's partner-resources repo. Every 4 hours it
+# runs scripts/sync-fitd-builder.sh and, when upstream changed, commits the update to the branch
+# it runs on (the default branch, for scheduled runs). Start it by hand with "Run workflow" in the
+# Actions tab; stop it there with "Disable workflow".
+#
+# Plain git rather than actions/checkout, so no action runtime can age out from under a job that
+# is meant to run unattended.
+name: Auto-update fitd-builder
+
+on:
+  schedule:
+    - cron: "23 */4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-update-fitd-builder
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out this repo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: git clone --quiet --branch "$GITHUB_REF_NAME" "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" .
+
+      - name: Pull the latest fitd-builder from upstream
+        id: sync
+        run: scripts/sync-fitd-builder.sh
+
+      - name: Commit and push the update
+        if: steps.sync.outputs.updated == 'true'
+        env:
+          VERSION: ${{ steps.sync.outputs.version }}
+          UPSTREAM_COMMIT: ${{ steps.sync.outputs.commit }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- .claude/skills/fitd-builder .claude/commands/fitd-builder
+          git commit --quiet -m "Update fitd-builder skill to $VERSION" \
+            -m "Synced from chathqio/partner-resources@$UPSTREAM_COMMIT by the auto-update workflow."
+          # If someone pushed since the checkout, replay the update on top once, then push.
+          git push --quiet origin "HEAD:$GITHUB_REF_NAME" || {
+            git pull --quiet --rebase origin "$GITHUB_REF_NAME"
+            git push --quiet origin "HEAD:$GITHUB_REF_NAME"
+          }
+          echo "Committed fitd-builder $VERSION (upstream $UPSTREAM_COMMIT)."

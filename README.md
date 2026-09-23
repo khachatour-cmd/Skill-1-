@@ -6,8 +6,10 @@ Claude Code on your machine, or start a Claude Code on the web session on it, an
 its commands are ready.
 
 Source: the `fitd-builder` plugin in
-[chathqio/partner-resources](https://github.com/chathqio/partner-resources/tree/master/fitd-builder),
-version **0.5.0**, commit `25735fb`. Only fitd-builder is included, not that repo's other plugins.
+[chathqio/partner-resources](https://github.com/chathqio/partner-resources/tree/master/fitd-builder).
+Only fitd-builder is included, not that repo's other plugins. It keeps itself current (see
+[Automatic updates](#automatic-updates)); `metadata.version` in
+[`SKILL.md`](.claude/skills/fitd-builder/SKILL.md) shows which version is in the repo.
 
 ## Commands
 
@@ -32,8 +34,9 @@ Output lands in `./niche-offers/<niche>.md` (contextualize, plus the HTML artifa
 |---|---|
 | `.claude/skills/fitd-builder/` | The skill, byte-for-byte as upstream, plus Extendly's `LICENSE` |
 | `.claude/commands/fitd-builder/` | The three commands. The folder name gives them their `fitd-builder:` prefix |
-| `.claude/settings.json` | Permissions for the skill's web and file tools (below) |
-| `scripts/sync-fitd-builder.sh` | Pulls newer upstream releases into this repo |
+| `.claude/settings.json` | Permissions for the skill's web and file tools (below), and the session-start update check |
+| `.github/workflows/auto-update-fitd-builder.yml` | Commits upstream updates to the repo every 4 hours |
+| `scripts/sync-fitd-builder.sh` | Syncs the two fitd-builder folders with upstream. Both update layers run it |
 
 ## Web search, fetch, and grep
 
@@ -67,18 +70,35 @@ and choose Edit. Set **Network access** to **Custom**, add `partner.extendly.com
 the default allowlist (or pick a broader access level). Pages the research step fetches need
 their hosts allowed the same way. `WebSearch` works either way.
 
-## Updating
+## Automatic updates
 
-The plugin updates itself through a hook, but a copy that lives in a repo can't. To pull a new
-release:
+Updates are on and need nothing from you. Two layers keep the skill current with Extendly's
+repo:
 
-```bash
-scripts/sync-fitd-builder.sh --check   # show what upstream would change
-scripts/sync-fitd-builder.sh           # apply it, then review with git diff and commit
-```
+1. **The repo updates itself.** The
+   [Auto-update fitd-builder](.github/workflows/auto-update-fitd-builder.yml) workflow checks
+   upstream every 4 hours and commits any change to the default branch. New sessions start from
+   that, and `git pull` brings it to a local checkout.
+2. **Every cloud session checks when it starts.** A `SessionStart` hook in
+   `.claude/settings.json` runs `scripts/sync-fitd-builder.sh --auto` as a Claude Code on the web
+   session opens, so the session uses the newest version even before the workflow catches up.
+   It stays silent when there's nothing new, adds about a second to startup, and a failed check
+   never holds up the session. If it does update, the changed files show up as uncommitted in
+   that session; the workflow commits the same change.
 
-Or ask Claude to "update the fitd-builder skill from upstream". The sync overwrites anything
-edited in the two fitd-builder folders, so re-apply local changes afterwards.
+| To | Do |
+|---|---|
+| Update right now | Actions tab > **Auto-update fitd-builder** > **Run workflow**, or run `scripts/sync-fitd-builder.sh` |
+| See what an update would change | `scripts/sync-fitd-builder.sh --check` |
+| Be told about updates instead of getting them | Set `EXTENDLY_SKILL_UPDATE_CHECK=notify` in the cloud environment's variables (session layer only) |
+| Turn updates off | Disable the workflow in the Actions tab, and set `EXTENDLY_SKILL_UPDATE_CHECK=off` |
+
+GitHub pauses scheduled workflows in a public repo after 60 days without a commit. Every update
+the workflow commits resets that clock, and the session check works either way; if GitHub does
+pause it, re-enable it from the Actions tab.
+
+Updates replace anything edited in the two fitd-builder folders, so keep your own changes
+elsewhere, or turn updates off before customizing the skill.
 
 ## claude.ai chat and Cowork
 

@@ -7,5 +7,20 @@
       "Edit(/niche-offers/**)",
       "Edit(/offer-drafts/**)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/scripts/sync-fitd-builder.sh", "--auto"],
+            "timeout": 60
+          }
+        ]
+      }
+    ]
   }
 }
